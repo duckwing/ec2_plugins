@@ -2,13 +2,12 @@
 
 import sys, os
 import importlib.abc, importlib.util
+import urllib.parse, urllib.request
 
 def main():
     if len(sys.argv) != 2:
         usage()
         return 1
-    conf = get_config()
-    print(conf['plugins'])
     plugin, func = sys.argv[1].split('.', 1)
     print('Running {}.{}'.format(plugin, func))
     hook_plugins()
@@ -40,16 +39,17 @@ class PluginImporter(importlib.abc.PathEntryFinder,
     def __init__(self, path):
         if path != PluginImporter.PACKAGE_PATH:
             raise ImportError
+        self.base_url = get_config()['plugins']['base_url']
         #print('Spawned PluginImporter')
     def find_spec(self, fullname, target=None):
         #print('findspec({})'.format(fullname))
         return importlib.util.spec_from_loader(fullname, self)
     def get_filename(self, fullname):
-        return fullname
+        return urllib.parse.urljoin(self.base_url,
+                                    fullname.replace('.', '/') + '.py')
     def get_data(self, path):
-        return ('#print("Importing module from {0}")\n'
-                'def test_msg():\n'
-                '  print("You invoked test of {0}")\n'.format(path))
+        print('Reading {}'.format(path))
+        return urllib.request.urlopen(path).read()
 
 if __name__ == '__main__':
     sys.exit(main())
