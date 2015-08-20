@@ -18,10 +18,10 @@ def get_config():
 def import_plugin(plugin_name):
     return importlib.import_module('plugins.' + plugin_name)
 
-def invoke_plugin(cmd):
+def invoke_plugin(cmd, *args):
     plugin, func = cmd.split('.', 1)
     print('Running {}.{}'.format(plugin, func))
-    return getattr(import_plugin(plugin), func)()
+    return getattr(import_plugin(plugin), func)(*args)
 
 def usage():
     print ('{} <module_name>.<function>'.format(sys.argv[0]))

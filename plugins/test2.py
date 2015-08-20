@@ -1,6 +1,6 @@
 
 from plugins.test import test_msg
 
-def test():
+def test(m):
     print('Running test_msg')
     test_msg()

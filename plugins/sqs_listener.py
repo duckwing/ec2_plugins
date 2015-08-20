@@ -1,4 +1,5 @@
 
+from traceback import print_exc
 from concurrent.futures import ThreadPoolExecutor
 from bootstrap import invoke_plugin
 from boto import config as boto_config
@@ -25,14 +26,13 @@ def listen():
             except KeyError:
                 print('Skipping invalid message')
                 continue
-            async_result = pool.submit(_run_isolated, cmd)
+            async_result = pool.submit(_run_isolated, cmd, msg)
             try:
                 _monitor_message_completion(async_result, msg)
                 print('Successfully processed a message')
                 queue.delete_message(msg)
             except:
-                print('Ignoring exception')
-                pass
+                print_exc()
 
 def _monitor_message_completion(async_result, msg):
     while True:
@@ -42,5 +42,5 @@ def _monitor_message_completion(async_result, msg):
             pass
         msg.change_visibility(MESSAGE_VISIBILITY)
 
-def _run_isolated(plugin_cmd):
-    return plugins.isolate.isolate(invoke_plugin, plugin_cmd)
+def _run_isolated(plugin_cmd, msg):
+    return plugins.isolate.isolate(invoke_plugin, plugin_cmd, msg)
