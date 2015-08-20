@@ -17,13 +17,11 @@ def listen():
 
     with ThreadPoolExecutor(1) as pool:
         while True:
-            msg = queue.read(visibility_timeout=MESSAGE_VISIBILITY,
-                             message_attributes=['All'])
+            msg = queue.read(visibility_timeout=MESSAGE_VISIBILITY)
             if msg is None:
                 continue
-            try:
-                cmd = msg.message_attributes['CMD']['string_value']
-            except KeyError:
+            cmd = msg.get_body().splitlines()
+            if len(cmd) < 0:
                 print('Skipping invalid message')
                 continue
             async_result = pool.submit(_run_isolated, cmd, msg)
@@ -42,5 +40,6 @@ def _monitor_message_completion(async_result, msg):
             pass
         msg.change_visibility(MESSAGE_VISIBILITY)
 
-def _run_isolated(plugin_cmd, msg):
-    return plugins.isolate.isolate(invoke_plugin, plugin_cmd, msg)
+def _run_isolated(cmd):
+    plugin_cmd = cmd[0]
+    return plugins.isolate.isolate(invoke_plugin, plugin_cmd, cmd)

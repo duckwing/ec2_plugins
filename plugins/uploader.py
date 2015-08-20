@@ -8,11 +8,11 @@ def upload_all(bucket_name):
     recipients = [item for r in recipients.split(',')
                        for item in ['-r', r]]
     tar = Popen(['tar', 'cv', '.'], stdout=PIPE)
-    pv = Popen(['pv'], stdin=tar.stdout, stdout=PIPE)
-    gpg = Popen(['gpg', '-e'] + recipients, stdin=pv.stdout, stdout=PIPE)
+    gpg = Popen(['gpg', '-e'] + recipients, stdin=tar.stdout, stdout=PIPE)
+    pv = Popen(['pv'], stdin=gpg.stdout, stdout=PIPE)
     tar.stdout.close()
-    pv.stdout.close()
-    s3.upload_multipart(bucket_name, gpg.stdout)
+    gpg.stdout.close()
+    s3.upload_multipart(bucket_name, pv.stdout)
 
 def test_upload_all():
     upload_all('snapshot')
