@@ -1,13 +1,16 @@
 from boto import config
 from boto.s3.connection import S3Connection
-from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
+from traceback import print_exc
 import io
 
 def upload_multipart(*args):    # see _uploader
-    th = Thread(name='uploader', target=_uploader, args=args)
-    th.start()
+    pool = ThreadPoolExecutor(1)
+    pool.submit(_uploader, *args)
+    pool.shutdown()
 
 def _uploader(object_key, inp_file):
+    print('thread started')
     def get_chunk():
         return inp_file.read(20000000)
 
@@ -18,16 +21,17 @@ def _uploader(object_key, inp_file):
     multi = buck.initiate_multipart_upload(object_key)
     part_num = 1
     try:
-        chunk = get_chunk()
-        while chunk:
-            multi.upload_part_from_file(io.BytesIO(chunk), part_num)
+        ch = get_chunk()
+        while ch:
+            multi.upload_part_from_file(io.BytesIO(ch), part_num)
             part_num += 1
-            chunk = get_chunk()
+            ch = get_chunk()
         multi.complete_upload()
         print('Upload finished')
-    except Exception as e:
+    except:
         print('Canceling upload due to error')
         multi.cancel_upload()
+        print_exc()
         raise
     finally:
         inp_file.close()

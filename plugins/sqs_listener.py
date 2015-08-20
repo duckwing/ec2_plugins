@@ -1,6 +1,7 @@
 
 from traceback import print_exc
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError # for handling future timeouts
 from bootstrap import invoke_plugin
 from boto import config as boto_config
 import boto.sqs
@@ -24,7 +25,7 @@ def listen():
             if len(cmd) < 0:
                 print('Skipping invalid message')
                 continue
-            async_result = pool.submit(_run_isolated, cmd, msg)
+            async_result = pool.submit(_run_isolated, cmd)
             try:
                 _monitor_message_completion(async_result, msg)
                 print('Successfully processed a message')
@@ -42,4 +43,5 @@ def _monitor_message_completion(async_result, msg):
 
 def _run_isolated(cmd):
     plugin_cmd = cmd[0]
-    return plugins.isolate.isolate(invoke_plugin, plugin_cmd, cmd)
+    cmd_args = cmd[1:]
+    return plugins.isolate.isolate(invoke_plugin, plugin_cmd, *cmd_args)
