@@ -28,5 +28,6 @@ def _uploader(object_key, inp_file):
     except Exception as e:
         print('Canceling upload due to error')
         multi.cancel_upload()
-        inp_file.close()
         raise
+    finally:
+        inp_file.close()
