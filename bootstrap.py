@@ -8,10 +8,8 @@ def main():
     if len(sys.argv) != 2:
         usage()
         return 1
-    plugin, func = sys.argv[1].split('.', 1)
-    print('Running {}.{}'.format(plugin, func))
     hook_plugins()
-    return getattr(import_plugin(plugin), func)()
+    return invoke_plugin(sys.argv[1])
 
 def get_config():
     from boto.pyami.config import Config
@@ -19,6 +17,11 @@ def get_config():
 
 def import_plugin(plugin_name):
     return importlib.import_module('plugins.' + plugin_name)
+
+def invoke_plugin(cmd):
+    plugin, func = cmd.split('.', 1)
+    print('Running {}.{}'.format(plugin, func))
+    return getattr(import_plugin(plugin), func)()
 
 def usage():
     print ('{} <module_name>.<function>'.format(sys.argv[0]))
