@@ -5,11 +5,11 @@ import importlib.abc, importlib.util
 import urllib.parse, urllib.request
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         usage()
         return 1
     hook_plugins()
-    return invoke_plugin(sys.argv[1])
+    return invoke_plugin(*sys.argv[1:])
 
 def get_config():
     from boto.pyami.config import Config
