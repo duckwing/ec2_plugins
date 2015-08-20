@@ -1,6 +1,6 @@
 
-from plugins.test import test_msg
+from plugins.s3 import upload_multipart
+import io
 
-def test(m):
-    print('Running test_msg')
-    test_msg()
+def test(*args):
+    upload_multipart('test_object.txt', io.BytesIO(b'test binary data'))
