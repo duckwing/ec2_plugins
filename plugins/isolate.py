@@ -1,25 +1,19 @@
-import os, sys, tempfile
+import os, tempfile
+from concurrent.futures import ProcessPoolExecutor
 
 def isolate(functor, *args):
-    child_pid = os.fork()
-    if child_pid > 0:
-        print('Forked off {}'.format(child_pid))
-        child_pid2, ret_code = os.wait()
-        assert child_pid2 == child_pid
-        print('Child {} finished with exit code {}'
-              .format(child_pid, ret_code))
-        return ret_code
-
-    with tempfile.TemporaryDirectory(dir='.') as temp_dir:
-        base_dir = os.getcwd()
-        os.chdir(temp_dir)
-        try:
-            sys.exit(functor(*args))
-        finally:
-            os.chdir(base_dir)
+    with ProcessPoolExecutor(1) as pool:
+        with tempfile.TemporaryDirectory(dir='.') as temp_dir:
+            f =  pool.submit(_run_isolated, temp_dir, functor, *args)
+            f.result()
 
 def test_isolate():
-    def reporter():
-        print('Isolated with PID {} and DIR {}'
-              .format(os.getpid(), os.getcwd()))
-    isolate(reporter)
+    isolate(_isolator_test_reporter)
+
+def _isolator_test_reporter():
+    print('Isolated with PID {} and DIR {}'
+          .format(os.getpid(), os.getcwd()))
+
+def _run_isolated(tdir, functor, *args):
+    os.chdir(tdir)
+    return functor(*args)

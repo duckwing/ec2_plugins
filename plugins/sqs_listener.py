@@ -1,4 +1,5 @@
 
+from concurrent.futures import ThreadPoolExecutor
 from bootstrap import invoke_plugin
 from boto import config as boto_config
 import boto.sqs
@@ -13,16 +14,33 @@ def listen():
     conn = boto.sqs.connect_to_region(region, profile_name='sqs_listener')
     queue = conn.get_queue(sqs_queue)
 
+    with ThreadPoolExecutor(1) as pool:
+        while True:
+            msg = queue.read(visibility_timeout=MESSAGE_VISIBILITY,
+                             message_attributes=['All'])
+            if msg is None:
+                continue
+            try:
+                cmd = msg.message_attributes['CMD']['string_value']
+            except KeyError:
+                print('Skipping invalid message')
+                continue
+            async_result = pool.submit(_run_isolated, cmd)
+            try:
+                _monitor_message_completion(async_result, msg)
+                print('Successfully processed a message')
+                queue.delete_message(msg)
+            except:
+                print('Ignoring exception')
+                pass
+
+def _monitor_message_completion(async_result, msg):
     while True:
-        msg = queue.read(visibility_timeout=MESSAGE_VISIBILITY,
-                         message_attributes=['All'])
-        if msg is None:
-            continue
+        try:
+            return async_result.result(MESSAGE_PING)
+        except TimeoutError:
+            pass
+        msg.change_visibility(MESSAGE_VISIBILITY)
 
-        cmd = msg.message_attributes['CMD']['string_value']
-        plugins.isolate.isolate(_make_plugin_invoker(cmd))
-
-def _make_plugin_invoker(cmd):
-    def invoker():
-        return invoke_plugin(cmd)
-    return invoker
+def _run_isolated(plugin_cmd):
+    return plugins.isolate.isolate(invoke_plugin, plugin_cmd)
